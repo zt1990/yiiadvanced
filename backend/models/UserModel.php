@@ -49,7 +49,7 @@ class UserModel extends ActiveRecord
 
 
             //必填项
-            ['password', 'required'],
+            //['password', 'required'],
             //输入类型，大小范围(由于密码已经加密无需验证长度)
             //['password', 'string','min'=>6],
 
@@ -172,10 +172,10 @@ class UserModel extends ActiveRecord
             }else{
                 //保存数据入库
                 $connection = \Yii::$app->db;
-                $uret = $connection->createCommand()->update('snake_user', ['username'=>"sfsdgdfgdfgdf"],
+                $uret = $connection->createCommand()->update('snake_user', $param['UserModel'],
                     "id=:id", [
-                    ':id' => 48
-                ]);
+                    ':id' => $param['UserModel']['id']
+                ])->execute();
 
                 if($uret){
                     return ['code' => 1, 'data' => '', 'msg' => '编辑用户成功'];
@@ -208,7 +208,7 @@ class UserModel extends ActiveRecord
             $connection->createCommand()->delete('snake_user', 'id='.$id)->execute();
             return ['code' => 1, 'data' => '', 'msg' => '删除管理员成功'];
 
-        }catch( \PDOException $e){
+        }catch(PDOException $e){
             return ['code' => 0, 'data' => '', 'msg' => $e->getMessage()];
         }
     }
