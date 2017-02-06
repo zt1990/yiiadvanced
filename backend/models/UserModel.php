@@ -204,10 +204,11 @@ class UserModel extends ActiveRecord
     public function delUser($id)
     {
         try{
-            $this->where('id', $id)->delete();
+            $connection = \Yii::$app->db;
+            $connection->createCommand()->delete('snake_user', 'id='.$id)->execute();
             return ['code' => 1, 'data' => '', 'msg' => '删除管理员成功'];
 
-        }catch( PDOException $e){
+        }catch( \PDOException $e){
             return ['code' => 0, 'data' => '', 'msg' => $e->getMessage()];
         }
     }

@@ -124,10 +124,10 @@ class UserController extends BaseController
     //删除角色
     public function actionUserDel()
     {
-        $id = input('param.id');
+        $id = Yii::$app->request->get('id');
 
         $role = new UserModel();
         $flag = $role->delUser($id);
-        return json(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
+        return json_encode(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
     }
 }
