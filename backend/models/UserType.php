@@ -10,11 +10,21 @@
 // +----------------------------------------------------------------------
 namespace backend\models;
 
-use yii\base\Models;
+use yii\db\ActiveRecord;
 
-class UserType extends Model
+class UserType extends ActiveRecord
 {
-    protected  $table = 'snake_role';
+
+    /**
+     * 操作指定数据库表
+     */
+    public static function tableName()
+    {
+        return '{{%role}}';
+    }
+
+
+
 
     /**
      * 根据搜索条件获取角色列表信息
@@ -24,8 +34,7 @@ class UserType extends Model
      */
     public function getRoleByWhere($where, $offset, $limit)
     {
-
-        return $this->where($where)->limit($offset, $limit)->order('id desc')->select();
+         return  UserType::find()->where($where)->limit($offset, $limit)->orderBy('id desc')->all();
     }
 
     /**
@@ -34,7 +43,7 @@ class UserType extends Model
      */
     public function getAllRole($where)
     {
-        return $this->where($where)->count();
+        return UserType::find()->where($where)->count();
     }
 
     /**
@@ -45,15 +54,22 @@ class UserType extends Model
     {
         try{
 
-            $result =  $this->validate('RoleValidate')->save($param);
-            if(false === $result){
-                // 验证失败 输出错误信息
-                return ['code' => -1, 'data' => '', 'msg' => $this->getError()];
+            if (!$this->validate()) {
+                return ['code' => -1, 'data' => '', 'msg' => $this->getErrors()];
             }else{
+//                //保存用户信息
+//                if(false === $result){
+//                    // 验证失败 输出错误信息
+//                    return ['code' => -1, 'data' => '', 'msg' => $this->getErrors()];
+//                }else{
+//
+//                    return ['code' => 1, 'data' => '', 'msg' => '添加角色成功'];
+//                }
 
-                return ['code' => 1, 'data' => '', 'msg' => '添加角色成功'];
             }
-        }catch( PDOException $e){
+
+
+        }catch(\Exception $e){
 
             return ['code' => -2, 'data' => '', 'msg' => $e->getMessage()];
         }
@@ -109,7 +125,7 @@ class UserType extends Model
     //获取所有的角色信息
     public function getRole()
     {
-        return $this->select();
+        return UserType::find()->all();
     }
 
     //获取角色的权限节点

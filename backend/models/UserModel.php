@@ -9,11 +9,17 @@
 // | Author: NickBai <1902822973@qq.com>
 // +----------------------------------------------------------------------
 namespace backend\models;
-
 use yii\base\Model;
+use yii\db\ActiveRecord;
 
-class UserModel extends Model
+class UserModel extends ActiveRecord
 {
+
+    public $username;
+    public $password;
+    public $real_name;
+    public $typeid;
+
 
     /**
      * 操作指定数据库表
@@ -22,6 +28,50 @@ class UserModel extends Model
     {
         return '{{%user}}';
     }
+
+
+    /**
+     * @inheritdoc
+     * 插入数据验证
+     */
+    public function rules()
+    {
+        return [
+            //用户名验证
+            //trim一下输入信息
+            ['username', 'trim'],
+            //必填项
+            ['username', 'required'],
+            //唯一性,自定义查询数据是否存在
+            ['username', 'checkusername','on'=>'insertUser'],
+            //输入类型，大小范围
+            ['username', 'string', 'length' => [2, 255]],
+
+
+            //必填项
+            ['password', 'required'],
+            //输入类型，大小范围(由于密码已经加密无需验证长度)
+            //['password', 'string','min'=>6],
+
+            //验证是否选择分类信息
+            ['typeid','required'],
+
+            //验证真实姓名
+            ['real_name','trim']
+        ];
+    }
+
+
+
+    //查询用户名子否存在
+    public function checkusername($attribute,$params){
+        $oldtag = UserModel::find()->where(array('username'=>$this->username))->one();
+        if($oldtag->id > 0){
+            $this->addError($attribute, $this->username.'用户名已经存在!');
+        }
+    }
+
+
 
     /**
      * 根据搜索条件获取用户列表信息
@@ -49,13 +99,12 @@ class UserModel extends Model
 //            ->where(['f.status' => 1])
 //            ->limit(1000);
 
-
-
         $row= (new \yii\db\Query())->select(['u.*','r.rolename'])
                              ->join('LEFT JOIN','{{%role}} r','u.typeid = r.id')
                              ->from('{{%user}} u')
                              ->where($where)
-                            ->limit($offset.$limit)
+                            ->offset($offset)
+                            ->limit($limit)
                             ->orderBy('u.id desc')
                             ->all();
 
@@ -78,16 +127,29 @@ class UserModel extends Model
     public function insertUser($param)
     {
         try{
-
-            $result =  $this->validate('UserValidate')->save($param);
+            //表单验证信息
+            $this->load($param);
+            $result =  $this->validate();
             if(false === $result){
                 // 验证失败 输出错误信息
-                return ['code' => -1, 'data' => '', 'msg' => $this->getError()];
+                return ['code' => -1, 'data' => '', 'msg' => $this->getErrors()];
             }else{
 
-                return ['code' => 1, 'data' => '', 'msg' => '添加用户成功'];
+                //保存数据入库
+                $connection = \Yii::$app->db;
+                // 批量插入数据 一次插入多行
+                $ret = $connection->createCommand()->batchInsert('snake_user', ['username', 'password','real_name','typeid'], [
+                    [$this->username,md5($this->password),$this->real_name,$this->typeid],
+                ])->execute();
+
+                if($ret){
+                    return ['code' => 1, 'data' => '', 'msg' => '添加用户成功'];
+                }else{
+                    return ['code' => -1, 'data' => '', 'msg' => '添加用户失败'];
+                }
+
             }
-        }catch( \PDOException $e){
+        }catch(\PDOException $e){
 
             return ['code' => -2, 'data' => '', 'msg' => $e->getMessage()];
         }
@@ -101,16 +163,27 @@ class UserModel extends Model
     {
         try{
 
-            $result =  $this->validate('UserValidate')->save($param, ['id' => $param['id']]);
-
+            //表单验证信息
+            $this->load($param);
+            $result =  $this->validate();
             if(false === $result){
                 // 验证失败 输出错误信息
-                return ['code' => 0, 'data' => '', 'msg' => $this->getError()];
+                return ['code' => 0, 'data' => '', 'msg' => $this->getErrors()];
             }else{
+                //保存数据入库
+                $connection = \Yii::$app->db;
+                $uret = $connection->createCommand()->update('snake_user', ['username'=>"sfsdgdfgdfgdf"],
+                    "id=:id", [
+                    ':id' => 48
+                ]);
 
-                return ['code' => 1, 'data' => '', 'msg' => '编辑用户成功'];
+                if($uret){
+                    return ['code' => 1, 'data' => '', 'msg' => '编辑用户成功'];
+                }else{
+                    return ['code' => -1, 'data' => '', 'msg' => '编辑用户失败'];
+                }
             }
-        }catch( PDOException $e){
+        }catch( \PDOException $e){
             return ['code' => 0, 'data' => '', 'msg' => $e->getMessage()];
         }
     }
@@ -121,7 +194,7 @@ class UserModel extends Model
      */
     public function getOneUser($id)
     {
-        return $this->where('id', $id)->find();
+        return  (new \yii\db\Query())->from("{{%user}} u")->where(['id'=>$id])->one();
     }
 
     /**
@@ -131,7 +204,6 @@ class UserModel extends Model
     public function delUser($id)
     {
         try{
-
             $this->where('id', $id)->delete();
             return ['code' => 1, 'data' => '', 'msg' => '删除管理员成功'];
 

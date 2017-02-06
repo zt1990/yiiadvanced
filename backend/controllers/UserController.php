@@ -22,6 +22,10 @@ use common\helps\tools;
 class UserController extends BaseController
 {
     public $layout = false;
+    //csrf验证关闭
+    public $enableCsrfValidation = false;
+
+
     //用户列表
     public function actionIndex()
     {
@@ -47,13 +51,14 @@ class UserController extends BaseController
                 $selectResult[$key]['status'] = $status[$vo['status']];
 
                 $operate = [
-                    '编辑' => \Yii::$app->urlManager->createUrl('user/user-edit', ['id' => $vo['id']]),
+                    //传参
+                    '编辑' => Yii::$app->urlManager->createUrl(['user/user-edit', 'id' => $vo['id']]),
                     '删除' => "javascript:userDel('".$vo['id']."')"
                 ];
 
                 $tools = new tools();
                 $selectResult[$key]['operate'] = $tools->showOperate($operate);
-                
+
                 if( 1 == $vo['id'] ){
                 	$selectResult[$key]['operate'] = '';
                 }
@@ -70,31 +75,25 @@ class UserController extends BaseController
 
 
 
-
-
     //添加用户
     public function actionUserAdd()
     {
+
         if(Yii::$app->request->isPost){
+            $params =  Yii::$app->request->post();
+            //实例化工具类
+            $tools = new tools();
+            $param['UserModel'] = $tools->parseParams($params['data']);
 
-            $param = input('param.');
-            $param = parseParams($param['data']);
-
-            $param['password'] = md5($param['password']);
             $user = new UserModel();
             $flag = $user->insertUser($param);
-
-            return json(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
+            return json_encode(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
         }
-
         $role = new UserType();
-        $this->assign([
-            'role' => $role->getRole(),
-            'status' => config('user_status')
-        ]);
-
-        return $this->fetch();
+        return $this->render('useradd',['role'=>$role->getRole(),'status'=>Yii::$app->params['user_status']]);
     }
+
+
 
     //编辑角色
     public function actionUserEdit()
@@ -103,26 +102,23 @@ class UserController extends BaseController
 
         if(Yii::$app->request->isPost){
 
-            $param = input('post.');
-            $param = parseParams($param['data']);
-            if(empty($param['password'])){
-                unset($param['password']);
+            $params =  Yii::$app->request->post();
+            //实例化工具类
+            $tools = new tools();
+            $param['UserModel'] = $tools->parseParams($params['data']);
+            if(empty($param['UserModel']['password'])){
+                unset($param['UserModel']['password']);
             }else{
-                $param['password'] = md5($param['password']);
+                $param['UserModel']['password'] = md5($param['UserModel']['password']);
             }
             $flag = $user->editUser($param);
 
-            return json(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
+            return json_encode(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
         }
 
-        $id = input('param.id');
+        $id = Yii::$app->request->get('id');
         $role = new UserType();
-        $this->assign([
-            'user' => $user->getOneUser($id),
-            'status' => config('user_status'),
-            'role' => $role->getRole()
-        ]);
-        return $this->fetch();
+        return $this->render('useredit',['user'=>$user->getOneUser($id),'role'=>$role->getRole(),'status'=>Yii::$app->params['user_status']]);
     }
 
     //删除角色

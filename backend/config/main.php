@@ -16,7 +16,7 @@ return [
     'language'=>'zh-CN',
     'components' => [
         'request' => [
-            'csrfParam' => '_csrf-backend',
+            'enableCookieValidation' => true,
         ],
         'user' => [
             'identityClass' => 'common\models\User',
