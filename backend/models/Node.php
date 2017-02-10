@@ -31,20 +31,10 @@ class Node extends Model
      */
     public function getNodeInfo($id)
     {
-//        $rows = (new \yii\db\Query())
-//            ->select(['id', 'email'])
-//            ->from('user')
-//            ->where(['last_name' => 'Smith'])
-//            ->limit(10)
-//            ->all();
-
-
         $query = (new \yii\db\Query())
             ->from('{{%node}}');
 
         $result = $query->select('id,node_name,typeid')->all();
-
-        var_dump($result);die;
         $str = "";
 
         $role = new UserType();
@@ -59,9 +49,7 @@ class Node extends Model
             if(!empty($rule) && in_array($vo['id'], $rule)){
                 $str .= ' ,"checked":1';
             }
-
             $str .= '},';
-
         }
 
         return "[" . substr($str, 0, -1) . "]";

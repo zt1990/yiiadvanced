@@ -10,9 +10,7 @@
 // +----------------------------------------------------------------------
 namespace backend\models;
 
-use yii\db\ActiveRecord;
-
-class UserType extends ActiveRecord
+class UserType extends SnakeRole
 {
 
     /**
@@ -25,7 +23,6 @@ class UserType extends ActiveRecord
 
 
 
-
     /**
      * 根据搜索条件获取角色列表信息
      * @param $where
@@ -34,7 +31,14 @@ class UserType extends ActiveRecord
      */
     public function getRoleByWhere($where, $offset, $limit)
     {
-         return  UserType::find()->where($where)->limit($offset, $limit)->orderBy('id desc')->all();
+
+        return (new \yii\db\Query())
+            ->from('{{%role}} u')
+            ->where($where)
+            ->offset($offset)
+            ->limit($limit)
+            ->orderBy('id desc')
+            ->all();
     }
 
     /**
@@ -54,20 +58,25 @@ class UserType extends ActiveRecord
     {
         try{
 
+            //表单验证信息
+            $this->load($param);
             if (!$this->validate()) {
                 return ['code' => -1, 'data' => '', 'msg' => $this->getErrors()];
             }else{
-//                //保存用户信息
-//                if(false === $result){
-//                    // 验证失败 输出错误信息
-//                    return ['code' => -1, 'data' => '', 'msg' => $this->getErrors()];
-//                }else{
-//
-//                    return ['code' => 1, 'data' => '', 'msg' => '添加角色成功'];
-//                }
 
+                //保存数据入库
+                $connection = \Yii::$app->db;
+                // 批量插入数据 一次插入多行
+                $ret = $connection->createCommand()->batchInsert('snake_role', ['rolename'], [
+                    [$this->rolename],
+                ])->execute();
+
+                if($ret){
+                    return ['code' => 1, 'data' => '', 'msg' => '添加角色成功'];
+                }else{
+                    return ['code' => -1, 'data' => '', 'msg' => '添加角色失败'];
+                }
             }
-
 
         }catch(\Exception $e){
 
@@ -82,18 +91,26 @@ class UserType extends ActiveRecord
     public function editRole($param)
     {
         try{
-
-            $result =  $this->validate('RoleValidate')->save($param, ['id' => $param['id']]);
-
-            if(false === $result){
-                // 验证失败 输出错误信息
-                return ['code' => 0, 'data' => '', 'msg' => $this->getError()];
+            //表单验证信息
+            $this->load($param);
+            if (!$this->validate()) {
+                return ['code' => -1, 'data' => '', 'msg' => $this->getErrors()];
             }else{
-
-                return ['code' => 1, 'data' => '', 'msg' => '编辑角色成功'];
+                //保存数据入库
+                $connection = \Yii::$app->db;
+                $uret = $connection->createCommand()->update('snake_role', $param['UserType'],
+                    "id=:id", [
+                        ':id' => $param['UserType']['id']
+                    ])->execute();
+                if($uret){
+                    return ['code' => 1, 'data' => '', 'msg' => '编辑用户成功'];
+                }else{
+                    return ['code' => -1, 'data' => '', 'msg' => '编辑用户失败'];
+                }
             }
-        }catch( PDOException $e){
-            return ['code' => 0, 'data' => '', 'msg' => $e->getMessage()];
+
+        }catch(\Exception $e){
+            return ['code' => -2, 'data' => '', 'msg' => $e->getMessage()];
         }
     }
 
@@ -103,7 +120,7 @@ class UserType extends ActiveRecord
      */
     public function getOneRole($id)
     {
-        return $this->where('id', $id)->find();
+        return self::find()->where(['id'=>$id])->one();
     }
 
     /**
@@ -113,11 +130,10 @@ class UserType extends ActiveRecord
     public function delRole($id)
     {
         try{
-
-            $this->where('id', $id)->delete();
+            $connection = \Yii::$app->db;
+            $connection->createCommand()->delete('snake_role', 'id='.$id)->execute();
             return ['code' => 1, 'data' => '', 'msg' => '删除角色成功'];
-
-        }catch( PDOException $e){
+        }catch(\Exception $e){
             return ['code' => 0, 'data' => '', 'msg' => $e->getMessage()];
         }
     }
@@ -131,8 +147,7 @@ class UserType extends ActiveRecord
     //获取角色的权限节点
     public function getRuleById($id)
     {
-        $res = $this->field('rule')->where('id', $id)->find();
-
+        $res =  SnakeRole::find()->select('rule')->where(['id'=>$id])->one();
         return $res['rule'];
     }
 
@@ -143,10 +158,15 @@ class UserType extends ActiveRecord
     public function editAccess($param)
     {
         try{
-            $this->save($param, ['id' => $param['id']]);
+            //保存数据入库
+            $connection = \Yii::$app->db;
+            $connection->createCommand()->update('snake_role', $param,
+                "id=:id", [
+                    ':id' => $param['id']
+                ])->execute();
             return ['code' => 1, 'data' => '', 'msg' => '分配权限成功'];
 
-        }catch( PDOException $e){
+        }catch(\Exception $e){
             return ['code' => 0, 'data' => '', 'msg' => $e->getMessage()];
         }
     }

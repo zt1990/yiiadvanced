@@ -8,22 +8,23 @@
 // +----------------------------------------------------------------------
 // | Author: NickBai <1902822973@qq.com>
 // +----------------------------------------------------------------------
+namespace backend\controllers;
+
 use yii;
 use yii\web\Controller;
 use backend\controllers\BaseController;
-
-use app\admin\model\Node;
-use app\admin\model\UserType;
-
+use backend\models\Node;
+use backend\models\UserType;
+use common\helps\tools;
 class RoleController extends BaseController
 {
+    public $layout = false;
     //角色列表
-    public function index()
+    public function actionIndex()
     {
-        if(request()->isAjax()){
-
-            $param = input('param.');
-
+        if(Yii::$app->request->isAjax){
+            $request = Yii::$app->request;
+            $param = $request->get();
             $limit = $param['pageSize'];
             $offset = ($param['pageNumber'] - 1) * $limit;
 
@@ -33,7 +34,6 @@ class RoleController extends BaseController
             }
             $user = new UserType();
             $selectResult = $user->getRoleByWhere($where, $offset, $limit);
-
             foreach($selectResult as $key=>$vo){
 
                 if(1 == $vo['id']){
@@ -42,93 +42,88 @@ class RoleController extends BaseController
                 }
 
                 $operate = [
-                    '编辑' => url('role/roleEdit', ['id' => $vo['id']]),
+                    '编辑' => \Yii::$app->urlManager->createUrl(['role/role-edit', 'id' => $vo['id']]),
                     '删除' => "javascript:roleDel('".$vo['id']."')",
                     '分配权限' => "javascript:giveQx('".$vo['id']."')"
                 ];
-                $selectResult[$key]['operate'] = showOperate($operate);
-
+                $tools = new tools();
+                $selectResult[$key]['operate'] = $tools->showOperate($operate);
             }
-
             $return['total'] = $user->getAllRole($where);  //总数据
             $return['rows'] = $selectResult;
-
-            return json($return);
+            return json_encode($return);
         }
 
-        return $this->fetch();
+        return $this->render('index');
     }
 
     //添加角色
-    public function roleAdd()
+    public function actionRoleAdd()
     {
-        if(request()->isPost()){
+        if(Yii::$app->request->isPost){
 
-            $param = input('param.');
-            $param = parseParams($param['data']);
-
+           // $request = Yii::$app->request;
+            $params = Yii::$app->request->post();
+            $param['UserType'] = tools::parseParams($params['data']);
+            //剔除csrf验证码
+            unset($param['UserType']['_csrf']);
             $role = new UserType();
             $flag = $role->insertRole($param);
 
-            return json(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
+            return json_encode(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
         }
 
-        return $this->fetch();
+        return $this->render('roleadd');
     }
 
     //编辑角色
-    public function roleEdit()
+    public function actionRoleEdit()
     {
         $role = new UserType();
+        if(Yii::$app->request->isPost){
+            $params = Yii::$app->request->post();
 
-        if(request()->isPost()){
-
-            $param = input('post.');
-            $param = parseParams($param['data']);
-
+            $param['UserType'] = tools::parseParams($params['data']);
+            //剔除csrf验证码
+            unset($param['UserType']['_csrf']);
             $flag = $role->editRole($param);
-
-            return json(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
+            return json_encode(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
         }
-
-        $id = input('param.id');
-        $this->assign([
-            'role' => $role->getOneRole($id)
-        ]);
-        return $this->fetch();
+        $id = Yii::$app->request->get('id');
+        return $this->render('roleedit',['id'=>$id,'role'=>$role->getOneRole($id)]);
     }
 
     //删除角色
-    public function roleDel()
+    public function actionRoleDel()
     {
-        $id = input('param.id');
-
+        $request = Yii::$app->request;
+        $id = $request->get('id');
         $role = new UserType();
         $flag = $role->delRole($id);
-        return json(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
+        return json_encode(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
     }
 
     //分配权限
-    public function giveAccess()
+    public function actionGiveAccess()
     {
-        $param = input('param.');
+        $param = tools::isParams();
         $node = new Node();
         //获取现在的权限
         if('get' == $param['type']){
-
             $nodeStr = $node->getNodeInfo($param['id']);
-            return json(['code' => 1, 'data' => $nodeStr, 'msg' => 'success']);
+            return json_encode(['code' => 1, 'data' => $nodeStr, 'msg' => 'success']);
         }
         //分配新权限
         if('give' == $param['type']){
-
             $doparam = [
                 'id' => $param['id'],
                 'rule' => $param['rule']
             ];
             $user = new UserType();
             $flag = $user->editAccess($doparam);
-            return json(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
+            return json_encode(['code' => $flag['code'], 'data' => $flag['data'], 'msg' => $flag['msg']]);
         }
     }
+
+
 }

@@ -15,7 +15,7 @@ class tools {
      * 生成操作按钮
      * @param array $operate 操作按钮数组
      */
-   public  function showOperate($operate = [])
+   public static  function showOperate($operate = [])
     {
         if(empty($operate)){
             return '';
@@ -28,12 +28,11 @@ class tools {
         <ul class="dropdown-menu">
 EOT;
 
-        foreach($operate as $key=>$vo){
 
+        foreach($operate as $key=>$vo){
             $option .= '<li><a href="'.$vo.'">'.$key.'</a></li>';
         }
         $option .= '</ul></div>';
-
         return $option;
     }
 
@@ -41,7 +40,7 @@ EOT;
  * 将字符解析成数组
  * @param $str
  */
-public function parseParams($str)
+public static  function parseParams($str)
 {
     $arrParams = [];
     parse_str(html_entity_decode(urldecode($str)), $arrParams);
@@ -53,7 +52,7 @@ public function parseParams($str)
  * @param $param
  * @param int $pid
  */
-public function subTree($param, $pid = 0)
+public static  function subTree($param, $pid = 0)
 {
     static $res = [];
     foreach($param as $key=>$vo){
@@ -72,7 +71,7 @@ public function subTree($param, $pid = 0)
  * @param $param
  * @return array
  */
-public function prepareMenu($param)
+public static  function prepareMenu($param)
 {
     $parent = []; //父类
     $child = [];  //子类
@@ -108,7 +107,7 @@ public function prepareMenu($param)
  * 解析备份sql文件
  * @param $file
  */
-public function analysisSql($file)
+public static  function analysisSql($file)
 {
     // sql文件包含的sql语句数组
     $sqls = array ();
@@ -143,6 +142,19 @@ public function analysisSql($file)
 
     return $sqls;
 }
+
+
+
+
+    //无需判断post还是get接收，直接调用数据
+   public static  function isParams($param =null){
+       $request = \Yii::$app->request;
+       if($request->isPost){
+           return $request->post($param);
+       }else{
+           return $request->get($param);
+       }
+   }
 
 }
 
